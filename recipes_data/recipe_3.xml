@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<recipe>
+    <title>Сырники</title>
+    <cuisine>Русская</cuisine>
+    <cooking_time>25</cooking_time>
+    <servings>3</servings>
+    <ingredients>Творог — 400 г
+Яйцо — 1 шт.
+Мука — 4 столовые ложки
+Сахар — 2 столовые ложки
+Растительное масло — для жарки</ingredients>
+    <instructions>Размять творог вилкой.
+Добавить яйцо, сахар и муку.
+Перемешать ингредиенты до однородности.
+Сформировать небольшие сырники.
+Обжарить с обеих сторон до готовности.</instructions>
+</recipe>
