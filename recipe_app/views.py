@@ -14,32 +14,37 @@ def read_xml(file_path):
 
 
 def save_xml(recipe):
-    root=ET.Element("recipe")
-    for field_name, value in recipe.items():
-        child=ET.SubElement(root,field_name)
-        child.text=str(value)
-    tree=ET.ElementTree(root)
     data_dir=settings.BASE_DIR/"recipes_data"
     data_dir.mkdir(parents=True, exist_ok=True)
-    index=1
-    while (data_dir/f"recipe_{index}.xml").exists():
-        index+=1
-    filename=f"recipe_{index}.xml"
-    file_path=data_dir/filename
+    file_path=data_dir/"recipes.xml"
+    if not file_path.exists():
+        root = ET.Element("recipes")
+        tree = ET.ElementTree(root)
+
+    else:
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+    recipe_element=ET.SubElement(root, "recipe")
+
+    for field_name, value in recipe.items():
+        child=ET.SubElement(recipe_element,field_name)
+        child.text=str(value)
 
     tree.write(
         file_path,
         encoding="utf-8",
         xml_declaration=True,
     )
-    return filename
 
-def validate_xml_file(file_path):
-    tree=ET.parse(file_path)
+    
+    return file_path.name
+    
+
+def validate_xml_file(xml_object):
+    tree=ET.parse(xml_object)
     root=tree.getroot()
-    if root.tag!="recipe":
-        raise ValueError("Элемент должен называться recipe")
     data={}
+    
     for child in root:
         data[child.tag]=child.text or ""
     required_fields=[
@@ -69,51 +74,60 @@ def xml_upload(request):
     upload_form = XmlUploadForm(request.POST, request.FILES)
     if upload_form.is_valid():
         uploaded_file=upload_form.cleaned_data["xml_file"]
-        data_dir = settings.BASE_DIR / "recipes_data"
-        data_dir.mkdir(parents=True, exist_ok=True)
+        data_dir=settings.BASE_DIR/"recipes_data"
+        file_path=data_dir/"recipes.xml"
+        if not file_path.exists():
+            root = ET.Element("recipes")
+            tree = ET.ElementTree(root)
+            recipe_element=ET.SubElement(root, "recipe")
+        else:
+            tree = ET.parse(file_path)
+            root = tree.getroot()
 
-        index = 1
-        file_path = data_dir / f"recipe_{index}.xml"
 
-        while file_path.exists():
-            index += 1
-            file_path = data_dir / f"recipe_{index}.xml"
-
-        with file_path.open("wb") as file:
-            for chunk in uploaded_file.chunks():
-                file.write(chunk)
         try:
-            validate_xml_file(file_path)
+            validate_xml_file(uploaded_file)
         except(ET.ParseError, ValueError) as error:
-            file_path.unlink(missing_ok=True)
             upload_form.add_error(
             "xml_file",
             f"Файл не прошёл проверку: {error}",)
         else:
+            uploaded_file.seek(0)
+            added_recipe=read_xml(uploaded_file)
+            save_xml(added_recipe)
             return redirect('index')
             
-        data_dir = settings.BASE_DIR / "recipes_data"
-        xml_recipes = []
+    data_dir = settings.BASE_DIR / "recipes_data"
+    recipes_file = data_dir / "recipes.xml"
+    xml_recipes = []
 
-        if data_dir.exists():
-            for file_path in sorted(data_dir.glob("recipe_*.xml")):
-                saved_recipe = read_xml(file_path)
-                saved_recipe["filename"] = file_path.name
-                xml_recipes.append(saved_recipe)
+    if recipes_file.exists():
+        tree = ET.parse(recipes_file)
+        root = tree.getroot()
+        for recipe_element in root:
+            saved_recipe = {}
 
-        context = {
-            "form": RecipeForm(),
-            "recipe": None,
-            "xml_filename": None,
-            "xml_recipes": xml_recipes,
-            "upload_form": upload_form,
-        }
+            for child in recipe_element:
+                saved_recipe[child.tag] = child.text or ""
 
-        return render(request, "main/index.html", context)
+            saved_recipe["filename"] = recipes_file.name
+            xml_recipes.append(saved_recipe)
+
+    context = {
+        "form": RecipeForm(),
+        "recipe": None,
+        "xml_filename": None,
+        "xml_recipes": xml_recipes,
+        "upload_form": upload_form,
+    }
+
+    return render(request, "main/index.html", context)
+
 
 
 
 def recipe_create(request):
+    upload_form = XmlUploadForm()
     saved_recipe=None
     recipe=None
     xml_filename=None
@@ -125,14 +139,27 @@ def recipe_create(request):
             return redirect("index")
     if request.method=="GET":
         form=RecipeForm()
-    data_dir=settings.BASE_DIR/"recipes_data"
-    xml_recipes=[]
-    if data_dir.exists():
-        for file_path in data_dir.glob("recipe_*.xml"):
-            saved_recipe=read_xml(file_path)
-            saved_recipe["filename"]=file_path.name
-            xml_recipes.append(saved_recipe)
-    
-    context={"form":form, "recipe":recipe, "xml_filename":xml_filename, "xml_recipes":xml_recipes, "upload_form": XmlUploadForm(),}
 
-    return render(request,'main/index.html',context)
+    data_dir = settings.BASE_DIR / "recipes_data"
+    recipes_file = data_dir / "recipes.xml"
+    xml_recipes = []
+    if recipes_file.exists():
+        tree = ET.parse(recipes_file)
+        root = tree.getroot()
+        for recipe_element in root:
+            saved_recipe = {}
+
+            for child in recipe_element:
+                saved_recipe[child.tag] = child.text or ""
+
+            saved_recipe["filename"] = recipes_file.name
+            xml_recipes.append(saved_recipe)
+
+    context = {
+        "form": RecipeForm(),
+        "recipe": None,
+        "xml_filename": None,
+        "xml_recipes": xml_recipes,
+        "upload_form": upload_form,
+    }
+    return render(request, "main/index.html", context)

@@ -12,18 +12,19 @@
             {{form.as_p}}
             <button type="submit">Добавить</button>
         </form>
+
+
         <h1>Загрузить файл</h1>
         <form method="post"
             action="{% url 'xml_upload' %}"
             enctype="multipart/form-data"
         >
             {% csrf_token %}
-
             {{ upload_form.as_p }}
 
             <button type="submit">Загрузить файл</button>
     </form>
-
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
         
     <h2>Все сохранённые XML-рецепты</h2>
 
@@ -41,7 +42,7 @@
 
                 <h4>Приготовление</h4>
                 <p>{{ item.instructions|linebreaksbr }}</p>
-
+                
                 <small>Файл: {{ item.filename }}</small>
             </section>
             <hr>
